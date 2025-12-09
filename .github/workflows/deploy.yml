@@ -1,0 +1,55 @@
+name: Desplegar con pnpm a GitHub Pages
+
+on:
+  push:
+    branches: ["main"]   # Se ejecuta al hacer push a main
+  workflow_dispatch:      # Se puede ejecutar manualmente
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "pnpm"
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Construir proyecto
+        run: pnpm run build
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir artefacto
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: "./dist"  # Vite siempre genera dist aquí
+
+      - name: Desplegar a GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
